@@ -222,7 +222,7 @@ static int product_matches_functions(struct android_usb_product *p)
 {
 	struct usb_function		*f;
 	list_for_each_entry(f, &android_config_driver.functions, list) {
-		if (product_has_function(p, f) == !!f->hidden)
+		if (product_has_function(p, f) == !!f->disabled)
 			return 0;
 	}
 	return 1;
@@ -343,8 +343,8 @@ void android_enable_function(struct usb_function *f, int enable)
 	int disable = !enable;
 	int product_id;
 
-	if (!!f->hidden != disable) {
-		f->hidden = disable;
+	if (!!f->disabled != disable) {
+		usb_function_set_enabled(f, !disable);
 
 #ifdef CONFIG_USB_ANDROID_RNDIS
 		if (!strcmp(f->name, "rndis")) {
@@ -372,11 +372,11 @@ void android_enable_function(struct usb_function *f, int enable)
 					if (strcmp(func->name, "rndis") &&
 					strcmp(func->name, "adb") &&
 					strcmp(func->name, "usb_mass_storage"))
-						func->hidden = enable;
+						func->disabled = enable;
 				} else {
 					if (strcmp(func->name, "rndis") &&
 					strcmp(func->name, "adb"))
-						func->hidden = enable;
+						func->disabled = enable;
 				}
 			}
 		}
