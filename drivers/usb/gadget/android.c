@@ -362,11 +362,11 @@ void android_enable_function(struct usb_function *f, int enable)
 					if (strcmp(func->name, "rndis") &&
 					strcmp(func->name, "adb") &&
 					strcmp(func->name, "usb_mass_storage"))
-						func->disabled = enable;
+						usb_function_set_enabled(func, !enable);
 				} else {
 					if (strcmp(func->name, "rndis") &&
 					strcmp(func->name, "adb"))
-						func->disabled = enable;
+						usb_function_set_enabled(func, !enable);
 				}
 			}
 		}
@@ -389,14 +389,7 @@ void android_enable_function(struct usb_function *f, int enable)
 		device_desc.idProduct = __constant_cpu_to_le16(product_id);
 		if (dev->cdev)
 			dev->cdev->desc.idProduct = device_desc.idProduct;
-
-		/* force reenumeration */
-		if (dev->cdev && dev->cdev->gadget &&
-				dev->cdev->gadget->speed != USB_SPEED_UNKNOWN) {
-			usb_gadget_disconnect(dev->cdev->gadget);
-			msleep(10);
-			usb_gadget_connect(dev->cdev->gadget);
-		}
+		usb_composite_force_reset(dev->cdev);
 	}
 }
 
