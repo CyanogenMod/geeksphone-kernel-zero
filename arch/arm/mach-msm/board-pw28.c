@@ -340,7 +340,7 @@ static int __init board_serialno_setup(char *serialno)
        android_usb_pdata.serial_number = serialno;
        return 1;
 }
-__setup("androidboot.serialno=", board_serialno_setup);
+//__setup("androidboot.serialno=", board_serialno_setup);
 #endif
 
 static struct platform_device smc91x_device = {
@@ -2861,6 +2861,26 @@ static void msm7x27_wlan_init(void)
 #include "smd_private.h"
 #define ID_SMD_UUID 12
 
+char *board_serial;
+static void generate_serial_from_uuid(void)
+{
+	unsigned *uuid;
+	board_serial = kzalloc(64, GFP_KERNEL);
+
+	uuid = smem_find(ID_SMD_UUID, 4);
+	sprintf(board_serial,"ZBR%u",(uuid[2]*uuid[3]));
+#ifdef CONFIG_USB_ANDROID
+	board_serialno_setup(board_serial);
+#endif
+
+	/* Ugly hack: Rewrite the command line to include the
+         * serial, since userspace wants it */
+	sprintf(boot_command_line,"%s androidboot.serialno=%s",saved_command_line,board_serial);
+	saved_command_line = alloc_bootmem(strlen (boot_command_line)+1);
+	strcpy (saved_command_line, boot_command_line);
+}
+
+
 void get_sd_boot_mode(unsigned *mode)
 {
     unsigned *pMode;
@@ -2896,6 +2916,7 @@ static void __init msm7x2x_init(void)
 #endif
 	wlan_power(1);
 	msm_clock_init(msm_clocks_7x27, msm_num_clocks_7x27);
+	generate_serial_from_uuid();
 
 	gpio_tlmm_config(GPIO_CFG(97,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
 	if (gpio_request(97, "wlan_ctrl") < 0)
