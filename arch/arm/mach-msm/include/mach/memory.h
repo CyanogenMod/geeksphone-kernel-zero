@@ -17,7 +17,11 @@
 #define __ASM_ARCH_MEMORY_H
 
 /* physical offset of RAM */
-#define PHYS_OFFSET UL(CONFIG_PHYS_OFFSET)
+#ifdef CONFIG_RAM_SIZE_512MB
+#define PHYS_OFFSET UL(0x12C00000)
+#else
+#define PHYS_OFFSET UL(0x00200000)
+#endif
 
 #define MAX_PHYSMEM_BITS 32
 #define SECTION_SIZE_BITS 28

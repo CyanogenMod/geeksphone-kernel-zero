@@ -123,6 +123,13 @@ config BATTERY_MSM
 	help
 	  Say Y to enable support for the battery in Qualcomm MSM.
 
+config SIMCUST_BATTERY_PERCENT_FOR_PE28
+	bool "MSM battery percent cust for pe28"
+	depends on ARCH_MSM
+	default n
+	help
+	  Say Y to enable support for the battery percentage curve for pe28 .
+
 config BATTERY_MSM_FAKE
 	tristate "Fake MSM battery"
 	depends on ARCH_MSM && BATTERY_MSM

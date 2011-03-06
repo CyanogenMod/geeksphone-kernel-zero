@@ -386,6 +386,9 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	case LINUX_REBOOT_CMD_RESTART:
 		kernel_restart(NULL);
 		break;
+	case 0x34344545:
+		kernel_restart("update-radio");
+		break;
 
 	case LINUX_REBOOT_CMD_CAD_ON:
 		C_A_D = 1;

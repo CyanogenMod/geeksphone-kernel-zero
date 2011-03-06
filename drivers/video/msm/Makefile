@@ -53,6 +53,11 @@ obj-$(CONFIG_FB_MSM_LCDC) += lcdc.o
 msm_mddi-objs := mddi.o mddihost.o mddihosti.o
 obj-$(CONFIG_FB_MSM_MDDI) += msm_mddi.o
 
+CFLAGS_REMOVE_lcdc_ili9325sim.o = -Werror
+CFLAGS_REMOVE_lcdc_lg4573.o = -Werror
+CFLAGS_REMOVE_lcdc_ili9418.o = -Werror
+CFLAGS_REMOVE_lcdc_hx8363.o = -Werror
+
 # External MDDI
 msm_mddi_ext-objs := mddihost_e.o mddi_ext.o
 obj-$(CONFIG_FB_MSM_EXTMDDI) += msm_mddi_ext.o
@@ -93,6 +98,14 @@ endif
 obj-$(CONFIG_FB_MSM_MIPI_TOSHIBA_VIDEO_WVGA_PT) += mipi_toshiba_video_wvga_pt.o
 
 obj-$(CONFIG_FB_MSM_LCDC_PANEL) += lcdc_panel.o
+obj-$(CONFIG_FB_MSM_LCDC_HX8363_WVGA) += lcdc_hx8363.o
+obj-$(CONFIG_FB_MSM_LCDC_LG4573_WVGA) += lcdc_lg4573.o
+obj-$(CONFIG_FB_MSM_LCDC_ILI9325SIM_QVGA) += lcdc_ili9325sim.o
+obj-$(CONFIG_FB_MSM_LCDC_ILI9418_HVGA) += lcdc_ili9418.o
+obj-$(CONFIG_FB_MSM_LCDC_S6D05A1_HVGA) += lcdc_s6d05a1.o
+obj-$(CONFIG_FB_MSM_LCDC_MULTI_PANEL)+= lcdc_multi.o
+obj-$(CONFIG_FB_MSM_LCDC_MULTI_9418_PANEL)+= lcdc_multi_9418.o
+obj-$(CONFIG_FB_MSM_LCDC_MULTI_4573_PANEL)+= lcdc_multi_4573.o
 obj-$(CONFIG_FB_MSM_LCDC_PRISM_WVGA) += lcdc_prism.o
 obj-$(CONFIG_FB_MSM_LCDC_SAMSUNG_WSVGA) += lcdc_samsung_wsvga.o
 obj-$(CONFIG_FB_MSM_LCDC_EXTERNAL_WXGA) += lcdc_external.o

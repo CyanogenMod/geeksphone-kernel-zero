@@ -119,6 +119,12 @@ static inline struct gpio_chip *gpio_to_chip(unsigned gpio)
 	return gpio_desc[gpio].chip;
 }
 
+struct gpio_chip *gpio2chip(unsigned gpio)
+{
+	return gpio_desc[gpio].chip;
+}
+EXPORT_SYMBOL_GPL(gpio2chip);
+
 /* dynamic allocation of GPIOs, e.g. on a hotplugged device */
 static int gpiochip_find_base(int ngpio)
 {

@@ -1,5 +1,4 @@
 /* #warning compile out */
-#if 0
 /* drivers/input/misc/gpio_input.c
  *
  * Copyright (C) 2007 Google, Inc.
@@ -54,6 +53,7 @@ static enum hrtimer_restart gpio_event_input_timer_func(struct hrtimer *timer)
 {
 	int i;
 	int pressed;
+    unsigned int type, code;
 	struct gpio_input_state *ds =
 		container_of(timer, struct gpio_input_state, timer);
 	unsigned gpio_flags = ds->info->flags;
@@ -128,8 +128,16 @@ static enum hrtimer_restart gpio_event_input_timer_func(struct hrtimer *timer)
 			pr_info("gpio_keys_scan_keys: key %x-%x, %d (%d) "
 				"changed to %d\n", ds->info->type,
 				key_entry->code, i, key_entry->gpio, pressed);
-		input_event(ds->input_devs->dev[key_entry->dev], ds->info->type,
-			    key_entry->code, pressed);
+        
+        type = ds->info->type; 
+        code = key_entry->code;
+        if (ds->info->info.filter) {
+            ds->info->info.filter(ds->input_devs, ds->info, ds, key_entry->dev,
+                &type, &code, &pressed);
+        }
+        pr_err("[keypad] gpio_event_input_timer_func() type<%d> code<%d> pressed<%d> \n", type, code, pressed);
+		input_event(ds->input_devs->dev[key_entry->dev], type,
+			    code, pressed);
 	}
 
 #if 0
@@ -161,6 +169,7 @@ static irqreturn_t gpio_event_input_irq_handler(int irq, void *dev_id)
 	const struct gpio_event_direct_entry *key_entry;
 	unsigned long irqflags;
 	int pressed;
+    unsigned int type, code;
 
 	if (!ds->use_irq)
 		return IRQ_HANDLED;
@@ -195,8 +204,14 @@ static irqreturn_t gpio_event_input_irq_handler(int irq, void *dev_id)
 				"(%d) changed to %d\n",
 				ds->info->type, key_entry->code, keymap_index,
 				key_entry->gpio, pressed);
-		input_event(ds->input_devs->dev[key_entry->dev], ds->info->type,
-			    key_entry->code, pressed);
+        type = ds->info->type; 
+        code = key_entry->code;
+        if (ds->info->info.filter) {
+            ds->info->info.filter(ds->input_devs, ds->info, ds, key_entry->dev,
+                &type, &code, &pressed);
+        }
+		input_event(ds->input_devs->dev[key_entry->dev], type,
+			    code, pressed);
 	}
 	return IRQ_HANDLED;
 }
@@ -352,4 +367,4 @@ err_bad_keymap:
 err_ds_alloc_failed:
 	return ret;
 }
-#endif
+EXPORT_SYMBOL(gpio_event_input_func);

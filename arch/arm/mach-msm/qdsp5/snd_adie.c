@@ -314,7 +314,7 @@ EXPORT_SYMBOL(adie_svc_put);
  *         -1 on failure
  */
 int adie_svc_config_adie_block(int id,
-		enum adie_block_enum_type adie_block_type, bool enable)
+		enum adie_block_enum_type adie_block_type, int value)
 {
 	int rc = 0;
 	struct adie_svc_config_adie_block_cb_args arg;
@@ -330,7 +330,7 @@ int adie_svc_config_adie_block(int id,
 	}
 	arg.client_id 	= adie_client[id].client_id;
 	arg.adie_block	= adie_block_type;
-	arg.config	= (enum adie_config_enum_type)enable;
+	arg.config	= (enum adie_config_enum_type)value;
 	adie_client[id].adie_svc_cb_done = 0;
 	mutex_unlock(&adie_client[id].lock);
 	rc = msm_rpc_client_req(adie_client[id].rpc_client,
@@ -406,7 +406,7 @@ static ssize_t snd_adie_debug_write(struct file *file, const char __user *buf,
 		MM_INFO("ADIE_SVC_CONFIG_ADIE_BLOCK: id %d adie_block %d \
 				config %d\n", id, adie_block, config);
 		rc =  adie_svc_config_adie_block(id,
-			(enum adie_block_enum_type)adie_block, (bool)config);
+			(enum adie_block_enum_type)adie_block, config);
 		if (!rc)
 			MM_INFO("ADIE block %d %s", adie_block,
 					config ? "enabled\n" : "disabled\n");

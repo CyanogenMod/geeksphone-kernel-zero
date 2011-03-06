@@ -214,6 +214,11 @@ struct msm_panel_common_pdata {
 	int mdp_core_clk_rate;
 };
 
+struct disp_state_type{
+	bool disp_initialized;
+	bool display_on;
+	bool disp_powered_up;
+};
 struct lcdc_platform_data {
 	int (*lcdc_gpio_config)(int on);
 	int (*lcdc_power_save)(int);

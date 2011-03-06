@@ -37,16 +37,47 @@ struct mt9d112_i2c_reg_conf {
 };
 
 struct mt9d112_reg {
-	const struct register_address_value_pair *prev_snap_reg_settings;
-	uint16_t prev_snap_reg_settings_size;
-	const struct register_address_value_pair *noise_reduction_reg_settings;
-	uint16_t noise_reduction_reg_settings_size;
-	const struct mt9d112_i2c_reg_conf *plltbl;
-	uint16_t plltbl_size;
-	const struct mt9d112_i2c_reg_conf *stbl;
-	uint16_t stbl_size;
-	const struct mt9d112_i2c_reg_conf *rftbl;
-	uint16_t rftbl_size;
+   	const struct mt9d112_i2c_reg_conf *init_tbl;
+	uint16_t init_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *preview_tbl;
+	uint16_t preview_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *snapshot_tbl;
+	uint16_t snapshot_tbl_size;
+	//wb
+   	const struct mt9d112_i2c_reg_conf *awb_tbl;
+	uint16_t awb_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *MWB_Cloudy_tbl;
+	uint16_t MWB_Cloudy_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *MWB_Day_light_tbl;
+	uint16_t MWB_Day_light_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *MWB_FLUORESCENT_tbl;
+	uint16_t MWB_FLUORESCENT_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *MWB_INCANDESCENT_tbl;
+	uint16_t MWB_INCANDESCENT_tbl_size;
+	//effect
+   	const struct mt9d112_i2c_reg_conf *EFFECT_OFF_tbl;
+	uint16_t EFFECT_OFF_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *EFFECT_MONO_tbl;
+	uint16_t EFFECT_MONO_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *EFFECT_SEPIA_tbl;
+	uint16_t EFFECT_SEPIA_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *EFFECT_NEGATIVE_tbl;
+	uint16_t EFFECT_NEGATIVE_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *EFFECT_SOLARIZE_tbl;
+	uint16_t EFFECT_SOLARIZE_tbl_size;
+	//af
+   	const struct mt9d112_i2c_reg_conf *VCM_Enable_full_scan_tbl;
+	uint16_t VCM_Enable_full_scan_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *AF_Trigger_tbl;
+	uint16_t AF_Trigger_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *VCM_Enable_Continue_scan_tbl;
+	uint16_t VCM_Enable_Continue_scan_tbl_size;
+	//scene
+   	const struct mt9d112_i2c_reg_conf *SCENE_AUTO_tbl;
+	uint16_t SCENE_AUTO_tbl_size;
+   	const struct mt9d112_i2c_reg_conf *SCENE_NIGHT_tbl;
+	uint16_t SCENE_NIGHT_tbl_size;
+
 };
 
 #endif /* MT9D112_H */

@@ -111,15 +111,19 @@ struct msm_panel_info {
 	__u32 clk_min;
 	__u32 clk_max;
 	__u32 frame_count;
-
-	union {
-		struct mddi_panel_info mddi;
-	};
-
+#ifdef CONFIG_FB_MSM_LCDC_LG4573_WVGA_PANEL
+	struct lcd_panel_info lcd;
+	struct lcdc_panel_info lcdc;
+#else
 	union {
 		struct lcd_panel_info lcd;
 		struct lcdc_panel_info lcdc;
 	};
+#endif
+	union {
+		struct mddi_panel_info mddi;
+	};
+
 };
 
 struct msm_fb_panel_data {
@@ -127,7 +131,11 @@ struct msm_fb_panel_data {
 	void (*set_rect) (int x, int y, int xres, int yres);
 	void (*set_vsync_notifier) (msm_fb_vsync_handler_type, void *arg);
 	void (*set_backlight) (struct msm_fb_data_type *);
-
+#ifdef CONFIG_FB_MSM_LCDC_LG4573_WVGA_PANEL
+	int (*set_vcom) (unsigned int *);
+	int (*get_vcom) (unsigned int *);
+	int (*init_vcom) (unsigned int *);
+#endif
 	/* function entry chain */
 	int (*on) (struct platform_device *pdev);
 	int (*off) (struct platform_device *pdev);

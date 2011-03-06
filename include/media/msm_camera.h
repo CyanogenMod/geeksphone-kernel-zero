@@ -428,6 +428,7 @@ struct msm_snapshot_pp_status {
 #define CFG_GET_PICT_MAX_EXP_LC		27
 #define CFG_SEND_WB_INFO    28
 #define CFG_MAX 			29
+#define CFG_SET_SCENE 		30
 
 #define MOVE_NEAR	0
 #define MOVE_FAR	1
@@ -436,6 +437,17 @@ struct msm_snapshot_pp_status {
 #define SENSOR_SNAPSHOT_MODE		1
 #define SENSOR_RAW_SNAPSHOT_MODE	2
 #define SENSOR_VIDEO_120FPS_MODE	3
+
+#define CAMERA_WB_MIN_MINUS_1 0
+#define CAMERA_WB_AUTO 1  /* This list must match aeecamera.h */
+#define CAMERA_WB_CUSTOM 2
+#define CAMERA_WB_INCANDESCENT 3
+#define CAMERA_WB_FLUORESCENT 4
+#define CAMERA_WB_DAYLIGHT 5
+#define CAMERA_WB_CLOUDY_DAYLIGHT 6
+#define CAMERA_WB_TWILIGHT 7
+#define CAMERA_WB_SHADE 8
+#define CAMERA_WB_MAX_PLUS_1 9
 
 #define SENSOR_QTR_SIZE			0
 #define SENSOR_FULL_SIZE		1
@@ -452,6 +464,30 @@ struct msm_snapshot_pp_status {
 #define CAMERA_EFFECT_BLACKBOARD	7
 #define CAMERA_EFFECT_AQUA		8
 #define CAMERA_EFFECT_MAX		9
+#define CAMERA_EFFECT_BLUISH		10
+#define CAMERA_EFFECT_GREENISH		11
+#define CAMERA_EFFECT_REDDISH		12
+
+enum {
+  CAMERA_BESTSHOT_OFF = 0,
+  CAMERA_BESTSHOT_LANDSCAPE = 1,
+  CAMERA_BESTSHOT_SNOW,
+  CAMERA_BESTSHOT_BEACH,
+  CAMERA_BESTSHOT_SUNSET,
+  CAMERA_BESTSHOT_NIGHT,
+  CAMERA_BESTSHOT_PORTRAIT,
+  CAMERA_BESTSHOT_BACKLIGHT,
+  CAMERA_BESTSHOT_SPORTS,
+  CAMERA_BESTSHOT_ANTISHAKE,
+  CAMERA_BESTSHOT_FLOWERS,
+  CAMERA_BESTSHOT_CANDLELIGHT,
+  CAMERA_BESTSHOT_FIREWORKS,
+  CAMERA_BESTSHOT_PARTY,
+  CAMERA_BESTSHOT_NIGHT_PORTRAIT,
+  CAMERA_BESTSHOT_THEATRE,
+  CAMERA_BESTSHOT_ACTION,
+  CAMERA_BESTSHOT_MAX
+} ;
 
 struct sensor_pict_fps {
 	uint16_t prevfps;
@@ -485,7 +521,10 @@ struct sensor_cfg_data {
 	uint8_t max_steps;
 
 	union {
+		int8_t brightness;
 		int8_t effect;
+		int8_t wb;//add by lijiankun 2010-9-3
+		int8_t scene;//add by lijiankun 2010-9-11
 		uint8_t lens_shading;
 		uint16_t prevl_pf;
 		uint16_t prevp_pl;

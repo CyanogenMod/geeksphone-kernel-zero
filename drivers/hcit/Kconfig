@@ -1,0 +1,15 @@
+menuconfig NEW_HCIT
+	bool "HCIT Support"
+	help
+	  Say Y to enable Linux HCIT support.  
+
+if NEW_HCIT
+
+comment "HCIT"
+
+config HCIT
+	tristate "HCIT Support"
+	help
+	  This option enables support for HCIT 
+
+endif # NEW_HCIT

@@ -2,6 +2,13 @@ GCC_VERSION      := $(shell $(CONFIG_SHELL) $(PWD)/scripts/gcc-version.sh $(CROS
 ifeq ($(GCC_VERSION),0404)
 CFLAGS_REMOVE_msm_vfe8x.o = -Wframe-larger-than=1024
 endif
+CFLAGS_REMOVE_msm_camera.o = -Werror
+CFLAGS_REMOVE_mt9d112.o = -Werror
+CFLAGS_REMOVE_ov5640.o = -Werror
+CFLAGS_REMOVE_ov2659.o = -Werror
+CFLAGS_REMOVE_ov7690.o = -Werror
+
+#EXTRA_CFLAGS		+= -DOV5642
 
 obj-$(CONFIG_MSM_CAMERA) += msm_camera.o msm_v4l2.o msm_axi_qos.o
 obj-$(CONFIG_MSM_CAMERA_FLASH) += flash.o
@@ -11,6 +18,9 @@ obj-$(CONFIG_ARCH_QSD8X50) += msm_vfe8x.o msm_vfe8x_proc.o msm_io8x.o
 obj-$(CONFIG_ARCH_MSM8X60) += msm_vfe31.o msm_io_8x60.o msm_vpe1.o
 obj-$(CONFIG_MT9T013) += mt9t013.o mt9t013_reg.o
 obj-$(CONFIG_MT9D112) += mt9d112.o mt9d112_reg.o
+obj-$(CONFIG_OV5640) += ov5640.o ov5640_reg.o
+obj-$(CONFIG_OV2659) += ov2659.o ov2659_reg.o
+obj-$(CONFIG_OV7690) += ov7690.o ov7690_reg.o
 obj-$(CONFIG_SN12M0PZ) += sn12m0pz.o sn12m0pz_reg.o
 obj-$(CONFIG_MT9P012) += mt9p012_reg.o
 obj-$(CONFIG_MSM_CAMERA_AF_FOXCONN) += mt9p012_fox.o

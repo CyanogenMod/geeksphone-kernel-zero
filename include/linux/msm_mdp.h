@@ -42,6 +42,10 @@
 						struct mdp_overlay)
 #define MSMFB_OVERLAY_PLAY_ENABLE     _IOW(MSMFB_IOCTL_MAGIC, 141, unsigned int)
 
+#define MSMFB_SET_PANEL_VCOM     _IOW(MSMFB_IOCTL_MAGIC, 142, unsigned int)
+#define MSMFB_GET_PANEL_VCOM     _IOW(MSMFB_IOCTL_MAGIC, 143, unsigned int)
+
+
 #define MDP_IMGTYPE2_START 0x10000
 
 enum {

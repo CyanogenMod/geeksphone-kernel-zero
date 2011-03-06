@@ -29,6 +29,8 @@ obj-y				+= eeprom/
 obj-y				+= cb710/
 obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
 obj-$(CONFIG_APANIC)		+= apanic.o
+obj-y               += version_dev.o
+obj-y               += oemrpc_dev.o
 
 obj-$(CONFIG_TSIF) += msm_tsif.o
 msm_tsif-objs := tsif.o
@@ -38,6 +40,11 @@ obj-$(CONFIG_HAPTIC_ISA1200)		+= isa1200.o
 obj-$(CONFIG_PMIC8058_PWM) += pmic8058-pwm.o
 obj-$(CONFIG_PMIC8058_VIBRATOR) += pmic8058-vibrator.o
 obj-$(CONFIG_PMIC8058_NFC) += pmic8058-nfc.o
+obj-$(CONFIG_BMA_ACC)          += bma020.o
+obj-$(CONFIG_SENSORS_MMC31XX)  += mmc31xx.o
+obj-$(CONFIG_ECOMPASS)         += mecs.o
+obj-$(CONFIG_CM3623)           += cm3623.o
+obj-$(CONFIG_THREAD_RIGHT)     += thread_right.o
 obj-$(CONFIG_PMIC8058_UPL) += pmic8058-upl.o
 obj-$(CONFIG_MSM_MEMORY_LOW_POWER_MODE_SUSPEND_DEEP_POWER_DOWN) \
 	+= msm_migrate_pages.o

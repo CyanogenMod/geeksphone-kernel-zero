@@ -26,6 +26,7 @@
 #include <mach/msm_rpcrouter.h>
 #include <mach/board.h>
 #include <mach/rpc_server_handset.h>
+#include <mach/qdsp5/snd_adie.h>
 
 #define DRIVER_NAME	"msm-handset"
 
@@ -54,6 +55,7 @@
 
 #define KEY(hs_key, input_key) ((hs_key << 24) | input_key)
 
+extern volatile int key_for_charger;
 enum hs_event {
 	HS_EVNT_EXT_PWR = 0,	/* External Power status        */
 	HS_EVNT_HSD,		/* Headset Detection            */
@@ -180,7 +182,7 @@ struct hs_cmd_data_type {
 
 static const uint32_t hs_key_map[] = {
 	KEY(HS_PWR_K, KEY_POWER),
-	KEY(HS_END_K, KEY_END),
+	KEY(HS_END_K, KEY_POWER),/*SWH*///DISABLE ENDCALL
 	KEY(HS_STEREO_HEADSET_K, SW_HEADPHONE_INSERT),
 	KEY(HS_HEADSET_SWITCH_K, KEY_MEDIA),
 	KEY(HS_HEADSET_SWITCH_2_K, KEY_VOLUMEUP),
@@ -213,8 +215,11 @@ struct msm_handset {
 	struct input_dev *ipdev;
 	struct switch_dev sdev;
 	struct msm_handset_platform_data *hs_pdata;
+    struct hrtimer hs_key_timer;
+    atomic_t hs_key_enabled;
 };
 
+static int adie_svc_id = -1;
 static struct msm_rpc_client *rpc_client;
 static struct msm_handset *hs;
 
@@ -238,6 +243,14 @@ report_headset_switch(struct input_dev *dev, int key, int value)
 
 	input_report_switch(dev, key, value);
 	switch_set_state(&hs->sdev, value);
+    if (-1 != adie_svc_id) {
+        adie_svc_config_adie_block(adie_svc_id, MIC_BIAS, !!value);
+    }
+    hrtimer_cancel(&hs->hs_key_timer);
+    atomic_set(&hs->hs_key_enabled, 0);
+    if (!!value) {
+        hrtimer_start(&hs->hs_key_timer, ktime_set(2, 0), HRTIMER_MODE_REL);
+    }
 }
 
 /*
@@ -255,6 +268,8 @@ static void report_hs_key(uint32_t key_code, uint32_t key_parm)
 {
 	int key, temp_key_code;
 
+	printk(KERN_ERR "[keypad] report_hs_key(%ld, %ld) Enter \n",key_code, key_parm);
+
 	if (key_code == HS_REL_K)
 		key = hs_find_key(key_parm);
 	else
@@ -268,7 +283,8 @@ static void report_hs_key(uint32_t key_code, uint32_t key_parm)
 	switch (key) {
 	case KEY_POWER:
 	case KEY_END:
-	case KEY_MEDIA:
+		printk(KERN_ERR "%s:  remote handset event %d\n",__func__, key);
+		key_for_charger = KEY_END;//For power off charging
 	case KEY_VOLUMEUP:
 	case KEY_VOLUMEDOWN:
 		input_report_key(hs->ipdev, key, (key_code != HS_REL_K));
@@ -279,9 +295,12 @@ static void report_hs_key(uint32_t key_code, uint32_t key_parm)
 	case -1:
 		printk(KERN_ERR "%s: No mapping for remote handset event %d\n",
 				 __func__, temp_key_code);
+	case KEY_MEDIA:
 		return;
 	}
 	input_sync(hs->ipdev);
+
+	printk(KERN_ERR "[keypad] report_hs_key() Exit key<%d>\n",key);
 }
 
 static int handle_hs_rpc_call(struct msm_rpc_server *server,
@@ -569,6 +588,23 @@ static ssize_t msm_headset_print_name(struct switch_dev *sdev, char *buf)
 	return -EINVAL;
 }
 
+static enum hrtimer_restart hs_key_timer(struct hrtimer *timer)
+{
+    printk("hs_key_timer\n");
+    atomic_set(&hs->hs_key_enabled, 1);
+    return HRTIMER_NORESTART;
+}
+
+bool hs_is_key_enabled(void)
+{
+    bool is_enabled = false;
+    if (hs) {
+        is_enabled = atomic_read(&hs->hs_key_enabled);
+    }
+    return is_enabled;
+}
+EXPORT_SYMBOL_GPL(hs_is_key_enabled);
+
 static int __devinit hs_probe(struct platform_device *pdev)
 {
 	int rc = 0;
@@ -622,6 +658,13 @@ static int __devinit hs_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, hs);
 
+    if (-1 == adie_svc_id)
+        adie_svc_id = adie_svc_get();
+    
+    memset(&hs->hs_key_enabled, 0, sizeof(atomic_t));
+    hrtimer_init(&hs->hs_key_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+    hs->hs_key_timer.function = hs_key_timer;
+    
 	rc = hs_rpc_init();
 	if (rc) {
 		dev_err(&ipdev->dev, "rpc init failure\n");
@@ -646,6 +689,11 @@ static int __devexit hs_remove(struct platform_device *pdev)
 {
 	struct msm_handset *hs = platform_get_drvdata(pdev);
 
+    if (-1 != adie_svc_id) {
+        adie_svc_put(adie_svc_id);
+        adie_svc_id = -1;
+    }
+    
 	input_unregister_device(hs->ipdev);
 	switch_dev_unregister(&hs->sdev);
 	kfree(hs);

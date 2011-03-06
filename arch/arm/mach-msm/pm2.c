@@ -1728,7 +1728,10 @@ static int msm_reboot_call
 		} else if (!strncmp(cmd, "oem-", 4)) {
 			unsigned code = simple_strtoul(cmd + 4, 0, 16) & 0xff;
 			restart_reason = 0x6f656d00 | code;
-		} else {
+		} 
+ 		else if (!strcmp(cmd, "update-radio")) {
+			restart_reason = 0x34344545;
+		}else {
 			restart_reason = 0x77665501;
 		}
 	}

@@ -32,11 +32,18 @@
 #include <linux/uaccess.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
-
+#include <linux/timer.h>
 #include <asm/atomic.h>
+#include <linux/miscdevice.h>
+#include <linux/fs.h>
 
 #include <mach/msm_rpcrouter.h>
 #include <mach/msm_battery.h>
+#include <linux/module.h>
+#include <linux/suspend.h>
+#include <linux/input.h>
+#include <linux/irq.h>
+#include <mach/msm_hsusb_hw.h>
 
 #define BATTERY_RPC_PROG	0x30000089
 #define BATTERY_RPC_VER_1_1	0x00010001
@@ -61,8 +68,54 @@
 #define BATTERY_CB_ID_ALL_ACTIV       	1
 #define BATTERY_CB_ID_LOW_VOL		2
 
-#define BATTERY_LOW            	2800
+#define BATTERY_LOW            	3500
 #define BATTERY_HIGH           	4300
+
+#define FEATRUE_BATTERY_CUST /*SWH*/
+
+#ifdef FEATRUE_BATTERY_CUST
+
+#define BATTERY_PERCENT_0        0 
+#define BATTERY_PERCENT_1      	15
+#define BATTERY_PERCENT_2      	30
+#define BATTERY_PERCENT_3      	55
+#define BATTERY_PERCENT_4     	85
+#define BATTERY_PERCENT_5        99 
+
+#ifdef CONFIG_SIMCUST_BATTERY_PERCENT_FOR_PE28
+#define BATTERY_LEVEL_0      	BATTERY_LOW
+#define BATTERY_LEVEL_1      	3655
+#define BATTERY_LEVEL_2      	3760
+#define BATTERY_LEVEL_3      	3840
+#define BATTERY_LEVEL_4     	4000
+#define BATTERY_LEVEL_5     	(BATTERY_HIGH -140)
+
+#define BATTERY_CHG_LEVEL_0      	BATTERY_LOW+100
+#define BATTERY_CHG_LEVEL_1      	3880
+#define BATTERY_CHG_LEVEL_2      	3950
+#define BATTERY_CHG_LEVEL_3      	4040
+#define BATTERY_CHG_LEVEL_4     	4185
+#define BATTERY_CHG_LEVEL_5     	(BATTERY_HIGH -75) //4// 4225
+#else//default list base on plum battery system
+#define BATTERY_LEVEL_0      	BATTERY_LOW
+#define BATTERY_LEVEL_1      	3660
+#define BATTERY_LEVEL_2      	3808
+#define BATTERY_LEVEL_3      	3890
+#define BATTERY_LEVEL_4     	4030
+#define BATTERY_LEVEL_5     	(BATTERY_HIGH -140)
+
+#define BATTERY_CHG_LEVEL_0      	BATTERY_LOW+100
+#define BATTERY_CHG_LEVEL_1      	3880
+#define BATTERY_CHG_LEVEL_2      	3997
+#define BATTERY_CHG_LEVEL_3      	4080
+#define BATTERY_CHG_LEVEL_4     	4216
+#define BATTERY_CHG_LEVEL_5     	(BATTERY_HIGH -59) //4 // 4241
+#endif
+#define CAPACITY_PERCENTAGE(curV, vL, pL, vH, pH) (pL+((pH-pL)*(curV-vL)*100/(vH-vL))/100)
+
+static u32 msm_batt_capacity_cust(u32 current_voltage);
+
+#endif
 
 #define ONCRPC_CHG_GET_GENERAL_STATUS_PROC 	12
 #define ONCRPC_CHARGER_API_VERSIONS_PROC 	0xffffffff
@@ -81,7 +134,22 @@
 #else
 #define DBG_LIMIT(x...) do {} while (0)
 #endif
-
+typedef struct batt_chg_msg {
+	u32	charger_status;
+	u32	charger_type;
+	u32	battery_status;
+	u32	battery_level;
+	u32 battery_voltage;
+	u32	battery_temp;
+	int key_for_charger;
+}batt_chg_msg_t;
+	struct input_dev *wake_input_dev;
+	static int is_from_resume = 0;
+volatile int key_for_charger = 0;
+EXPORT_SYMBOL(key_for_charger);
+volatile batt_chg_msg_t batt_chg_msg;
+struct timeval charger_time_val;
+static DECLARE_MUTEX(g_battery_mutex);
 enum {
 	BATTERY_REGISTRATION_SUCCESSFUL = 0,
 	BATTERY_DEREGISTRATION_SUCCESSFUL = BATTERY_REGISTRATION_SUCCESSFUL,
@@ -270,6 +338,9 @@ static enum power_supply_property msm_power_props[] = {
 static char *msm_power_supplied_to[] = {
 	"battery",
 };
+#define WAKE_UPDATE_BATT_INFO 2
+extern int oem_rpc_client_register(int id);
+extern void set_data_to_arm9(int id, char *in,int insize);
 
 static int msm_power_get_property(struct power_supply *psy,
 				  enum power_supply_property psp,
@@ -321,6 +392,7 @@ static enum power_supply_property msm_batt_power_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_CAPACITY,
+	POWER_SUPPLY_PROP_TEMP,
 };
 
 static int msm_batt_power_get_property(struct power_supply *psy,
@@ -351,6 +423,9 @@ static int msm_batt_power_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		val->intval = msm_batt_info.batt_capacity;
+		break;
+	case POWER_SUPPLY_PROP_TEMP:
+		val->intval = msm_batt_info.battery_temp * 10;
 		break;
 	default:
 		return -EINVAL;
@@ -465,11 +540,32 @@ static void msm_batt_update_psy_status(void)
 	battery_voltage = rep_batt_chg.v1.battery_voltage;
 	battery_temp = rep_batt_chg.v1.battery_temp;
 
+	batt_chg_msg.charger_status = charger_status;
+	batt_chg_msg.charger_type = charger_type;
+	batt_chg_msg.battery_status = battery_status;
+	batt_chg_msg.battery_level = battery_level;
+	batt_chg_msg.battery_voltage = battery_voltage;
+	batt_chg_msg.battery_temp = battery_temp;
+#if 0
+	printk(KERN_ERR "BATT ---charger_status%d",charger_status);
+	printk(KERN_ERR "BATT ---charger_type  %d",charger_type);
+	printk(KERN_ERR "BATT ---battery_status  %d",battery_status);	
+	printk(KERN_ERR "BATT ---battery_level   %d",battery_level);
+	printk(KERN_ERR "BATT ---battery_voltage  %d",battery_voltage);
+	printk(KERN_ERR "BATT ---battery_temp      %d",battery_temp);
+#endif
 	/* Make correction for battery status */
 	if (battery_status == BATTERY_STATUS_INVALID_v1) {
 		if (msm_batt_info.chg_api_version < CHG_RPC_VER_2_2)
 			battery_status = BATTERY_STATUS_INVALID;
 	}
+
+
+#ifdef FEATRUE_BATTERY_CUST
+    //printk(KERN_ERR "[VBAT] Update voltage cust without report upward ");
+    msm_batt_capacity_cust(battery_voltage);
+#endif    
+
 
 	if (charger_status == msm_batt_info.charger_status &&
 	    charger_type == msm_batt_info.charger_type &&
@@ -499,15 +595,13 @@ static void msm_batt_update_psy_status(void)
 			 battery_status, BATTERY_STATUS_GOOD, battery_level);
 		battery_status = BATTERY_STATUS_GOOD;
 	}
-
 	if (msm_batt_info.charger_type != charger_type) {
-		if (charger_type == CHARGER_TYPE_USB_WALL ||
-		    charger_type == CHARGER_TYPE_USB_PC ||
+		if(charger_type == CHARGER_TYPE_USB_PC ||
 		    charger_type == CHARGER_TYPE_USB_CARKIT) {
 			DBG_LIMIT("BATT: USB charger plugged in\n");
 			msm_batt_info.current_chg_source = USB_CHG;
 			supp = &msm_psy_usb;
-		} else if (charger_type == CHARGER_TYPE_WALL) {
+		} else if (charger_type == CHARGER_TYPE_WALL || charger_type == CHARGER_TYPE_USB_WALL ) {
 			DBG_LIMIT("BATT: AC Wall changer plugged in\n");
 			msm_batt_info.current_chg_source = AC_CHG;
 			supp = &msm_psy_ac;
@@ -632,6 +726,21 @@ static void msm_batt_update_psy_status(void)
 	msm_batt_info.battery_level 	= battery_level;
 	msm_batt_info.battery_temp 	= battery_temp;
 
+	batt_chg_msg.charger_status = charger_status;
+	batt_chg_msg.charger_type = charger_type;
+	batt_chg_msg.battery_status = battery_status;
+	batt_chg_msg.battery_level = battery_level;
+	batt_chg_msg.battery_voltage = battery_voltage;
+	batt_chg_msg.battery_temp = battery_temp;
+#if 0
+	printk(KERN_ERR "BATT ---charger_status%d",charger_status);
+	printk(KERN_ERR "BATT ---charger_type  %d",charger_type);
+	printk(KERN_ERR "BATT ---battery_status  %d",battery_status);	
+	printk(KERN_ERR "BATT ---battery_level   %d",battery_level);
+	printk(KERN_ERR "BATT ---battery_voltage  %d",battery_voltage);
+	printk(KERN_ERR "BATT ---battery_temp      %d",battery_temp);
+#endif
+
 	if (msm_batt_info.battery_voltage != battery_voltage) {
 		msm_batt_info.battery_voltage  	= battery_voltage;
 		msm_batt_info.batt_capacity =
@@ -643,12 +752,155 @@ static void msm_batt_update_psy_status(void)
 			supp = msm_batt_info.current_ps;
 	}
 
+		if(battery_level == BATTERY_LEVEL_FULL)
+		{
+			msm_batt_info.batt_status =	POWER_SUPPLY_STATUS_FULL;
+			msm_batt_info.batt_capacity = 100;
+			{
+				time_t temp;
+				temp = charger_time_val.tv_sec;
+				do_gettimeofday(&charger_time_val);
+				printk(KERN_ERR "\n*********stop charging minutes %d  *********\n",(charger_time_val.tv_sec - temp)/60);
+			}
+			supp = &msm_psy_batt;
+		}
+#if 0
+		else if(((msm_batt_info.current_chg_source & AC_CHG) 
+					|| (msm_batt_info.current_chg_source & USB_CHG)) 
+				&& (msm_batt_info.batt_capacity == 100 ))
+		{
+			{
+				if(msm_batt_info.batt_capacity == 100 )
+				{	
+					msm_batt_info.batt_capacity = 99;
+					supp = &msm_psy_batt;
+				}
+			}
+		}
+#endif
+
 	if (supp) {
 		msm_batt_info.current_ps = supp;
 		DBG_LIMIT("BATT: Supply = %s\n", supp->name);
 		power_supply_changed(supp);
 	}
+
 }
+
+void update_usb_to_gui(int i)
+{
+
+	u32	charger_status;
+	u32	charger_type;
+	u32	battery_status;
+	u32	battery_level;
+	u32 battery_voltage;
+	u32	battery_temp;
+	int rc;
+	struct	power_supply	*supp;
+	//extern void request_suspend_state(suspend_state_t new_state);
+		//request_suspend_state(PM_SUSPEND_ON);
+//return;
+	if(i!=0)
+	{
+		do_gettimeofday(&charger_time_val);
+		printk(KERN_ERR "\nstart charging second %d\n",charger_time_val.tv_sec);
+	}
+	if(is_from_resume == 1)
+	{
+	}
+	else
+		return;
+	printk(KERN_ERR "\nupdate usb to gui %d\n",i);
+	//set_data_to_arm9(WAKE_UPDATE_BATT_INFO,(char *)&rc,sizeof(int));
+	//return;
+	//down(&g_battery_mutex);
+#if 1
+	msm_batt_info.charger_type 	= i;
+
+	if(i == 2)
+	{
+		supp = &msm_psy_usb;
+		msm_batt_info.current_chg_source = USB_CHG;			
+		msm_batt_info.current_ps = supp;
+		power_supply_changed(supp);
+
+		msm_batt_info.batt_status = POWER_SUPPLY_STATUS_CHARGING;
+		supp = &msm_psy_batt;
+		msm_batt_info.current_ps = supp;
+		power_supply_changed(supp);
+		//up(&g_battery_mutex);
+	}
+	else if(i == 1 || i== 3)
+	{
+		supp = &msm_psy_ac;
+		msm_batt_info.current_chg_source = AC_CHG;			
+		msm_batt_info.current_ps = supp;
+		power_supply_changed(supp);
+	
+		msm_batt_info.batt_status = POWER_SUPPLY_STATUS_CHARGING;
+		supp = &msm_psy_batt;
+		msm_batt_info.current_ps = supp;
+		power_supply_changed(supp);
+//	up(&g_battery_mutex);
+	}
+	else if(i == 0)
+	{
+		if(msm_batt_info.current_chg_source == USB_CHG)
+		{
+			supp = &msm_psy_usb;
+			msm_batt_info.current_chg_source = 0;			
+			msm_batt_info.current_ps = supp;
+			power_supply_changed(supp);
+
+		}
+		else if(msm_batt_info.current_chg_source == AC_CHG)
+		{
+			supp = &msm_psy_ac;
+			msm_batt_info.current_chg_source = 0;			
+			msm_batt_info.current_ps = supp;
+			power_supply_changed(supp);
+		}
+
+		msm_batt_info.batt_status =	POWER_SUPPLY_STATUS_NOT_CHARGING;	
+		supp = &msm_psy_batt;
+		msm_batt_info.current_ps = supp;
+		power_supply_changed(supp);
+extern void request_suspend_state(suspend_state_t new_state);
+request_suspend_state(PM_SUSPEND_ON);
+
+//	up(&g_battery_mutex);
+//	extern void request_suspend_state(suspend_state_t new_state);
+#if 0
+		request_suspend_state(PM_SUSPEND_ON);
+	input_report_key(wake_input_dev,102,1);
+	input_report_key(wake_input_dev, 102, 0);
+	input_sync(wake_input_dev);
+
+#endif
+
+	}
+	//request_suspend_state(PM_SUSPEND_ON);
+#endif
+
+}
+EXPORT_SYMBOL(update_usb_to_gui);
+void update_chg_to_gui(int i)
+{
+	struct	power_supply	*supp;
+
+	printk(KERN_ERR "\nupdate ac to gui %d\n",i);
+
+	msm_batt_info.charger_type 	= i;
+
+	supp = &msm_psy_ac;
+	msm_batt_info.current_chg_source = i;			
+	msm_batt_info.batt_status =	i;
+	msm_batt_info.current_ps = supp;
+	power_supply_changed(supp);
+
+}
+EXPORT_SYMBOL(update_chg_to_gui);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 struct batt_modify_client_req {
@@ -757,11 +1009,18 @@ void msm_batt_early_suspend(struct early_suspend *h)
 
 	pr_debug("%s: enter\n", __func__);
 
+	is_from_resume = 1;	
+	printk(KERN_ERR "%s: enter\n", __func__);
 	if (msm_batt_info.batt_handle != INVALID_BATT_HANDLE) {
 		rc = msm_batt_modify_client(msm_batt_info.batt_handle,
 				BATTERY_LOW, BATTERY_VOLTAGE_BELOW_THIS_LEVEL,
 				BATTERY_CB_ID_LOW_VOL, BATTERY_LOW);
-
+#if 0  
+		BATTERY_LEVEL,
+		rc = msm_batt_modify_client(msm_batt_info.batt_handle,
+				BATTERY_LOW, BATTERY_LEVEL,
+				BATTERY_CB_ID_LOW_VOL, BATTERY_LOW);
+#endif
 		if (rc < 0) {
 			pr_err("%s: msm_batt_modify_client. rc=%d\n",
 			       __func__, rc);
@@ -780,7 +1039,7 @@ void msm_batt_late_resume(struct early_suspend *h)
 	int rc;
 
 	pr_debug("%s: enter\n", __func__);
-
+	is_from_resume = 0;	
 	if (msm_batt_info.batt_handle != INVALID_BATT_HANDLE) {
 		rc = msm_batt_modify_client(msm_batt_info.batt_handle,
 				BATTERY_LOW, BATTERY_ALL_ACTIVITY,
@@ -794,7 +1053,7 @@ void msm_batt_late_resume(struct early_suspend *h)
 		pr_err("%s: ERROR. invalid batt_handle\n", __func__);
 		return;
 	}
-
+	set_data_to_arm9(WAKE_UPDATE_BATT_INFO,(char *)&rc,sizeof(int));
 	pr_debug("%s: exit\n", __func__);
 }
 #endif
@@ -1091,13 +1350,129 @@ static u32 msm_batt_capacity(u32 current_voltage)
 	u32 high_voltage = msm_batt_info.voltage_max_design;
 
 	if (current_voltage <= low_voltage)
-		return 0;
-	else if (current_voltage >= high_voltage)
+		return 1;
+	else if (current_voltage >= (high_voltage - 100))
 		return 100;
 	else
 		return (current_voltage - low_voltage) * 100
 			/ (high_voltage - low_voltage);
 }
+
+#ifdef FEATRUE_BATTERY_CUST
+static u32 msm_batt_capacity_cust(u32 current_voltage)
+{
+    static u32 once = 0;
+    static u32 delay = 0;
+    static u32 pre_percentage = BATTERY_PERCENT_5;
+    u32 cur_percentage = BATTERY_PERCENT_5;
+
+    static u32 pre_status = CHARGER_TYPE_NONE;
+    u32 cur_status = msm_batt_info.charger_type;//msm_batt_info.batt_status;
+
+    //printk(KERN_ERR "[VBAT] msm_batt_capacity_cust() ++++++ ");
+
+#if 0
+    {//Debuging code
+        static u32 array[60] = {0}; 
+        static int index = 0; 
+        int i = 0; 
+        
+        if(index<50)
+        {
+            index++;
+            array[index] = cur_status;
+        }
+
+        for(i=0; i<50; i+=5 )
+        {
+            printk(KERN_ERR "[VBAT] array[%d ~~].......... <  %d,  %d,  %d,  %d,  %d  >", 
+                i, array[i],array[i+1],array[i+2],array[i+3],array[i+4]);
+        }
+    }
+#endif        
+    
+    if( (  CHARGER_TYPE_USB_PC != cur_status )&&(  CHARGER_TYPE_USB_WALL!= cur_status ) )
+    {
+       // printk(KERN_ERR "[VBAT] Not charge");
+    	if (current_voltage <= BATTERY_LEVEL_0)
+    		cur_percentage =  BATTERY_PERCENT_0;
+    	else if ((BATTERY_LEVEL_0 < current_voltage ) && (current_voltage <= BATTERY_LEVEL_1))
+    		cur_percentage = CAPACITY_PERCENTAGE(current_voltage, BATTERY_LEVEL_0, BATTERY_PERCENT_0,BATTERY_LEVEL_1,BATTERY_PERCENT_1);
+    	else if ((BATTERY_LEVEL_1 < current_voltage ) && (current_voltage <= BATTERY_LEVEL_2))
+    		cur_percentage = CAPACITY_PERCENTAGE(current_voltage, BATTERY_LEVEL_1, BATTERY_PERCENT_1,BATTERY_LEVEL_2,BATTERY_PERCENT_2);
+    	else if ((BATTERY_LEVEL_2 < current_voltage ) && (current_voltage <= BATTERY_LEVEL_3))
+    		cur_percentage = CAPACITY_PERCENTAGE(current_voltage, BATTERY_LEVEL_2, BATTERY_PERCENT_2,BATTERY_LEVEL_3,BATTERY_PERCENT_3);
+    	else if ((BATTERY_LEVEL_3 < current_voltage ) && (current_voltage <= BATTERY_LEVEL_4))
+    		cur_percentage = CAPACITY_PERCENTAGE(current_voltage, BATTERY_LEVEL_3, BATTERY_PERCENT_3,BATTERY_LEVEL_4,BATTERY_PERCENT_4);
+    	else if ((BATTERY_LEVEL_4 < current_voltage ) && (current_voltage <=  BATTERY_LEVEL_5))
+    		cur_percentage = CAPACITY_PERCENTAGE(current_voltage, BATTERY_LEVEL_4, BATTERY_PERCENT_4,BATTERY_LEVEL_5,BATTERY_PERCENT_5);
+    	else //if (current_voltage > (high_voltage - 100))
+    		cur_percentage = BATTERY_PERCENT_5;
+    }
+    else
+    {
+       // printk(KERN_ERR "[VBAT] Is charging");
+    	if (current_voltage <= BATTERY_CHG_LEVEL_0)
+    		cur_percentage = BATTERY_PERCENT_0;
+    	else if ((BATTERY_CHG_LEVEL_0 < current_voltage ) && (current_voltage <= BATTERY_CHG_LEVEL_1))
+    		cur_percentage = CAPACITY_PERCENTAGE(current_voltage, BATTERY_CHG_LEVEL_0, BATTERY_PERCENT_0,BATTERY_CHG_LEVEL_1,BATTERY_PERCENT_1);
+    	else if ((BATTERY_CHG_LEVEL_1 < current_voltage ) && (current_voltage <= BATTERY_CHG_LEVEL_2))
+    		cur_percentage = CAPACITY_PERCENTAGE(current_voltage, BATTERY_CHG_LEVEL_1, BATTERY_PERCENT_1,BATTERY_CHG_LEVEL_2,BATTERY_PERCENT_2);
+    	else if ((BATTERY_CHG_LEVEL_2 < current_voltage ) && (current_voltage <= BATTERY_CHG_LEVEL_3))
+    		cur_percentage = CAPACITY_PERCENTAGE(current_voltage, BATTERY_CHG_LEVEL_2, BATTERY_PERCENT_2,BATTERY_CHG_LEVEL_3,BATTERY_PERCENT_3);
+    	else if ((BATTERY_CHG_LEVEL_3 < current_voltage ) && (current_voltage <= BATTERY_CHG_LEVEL_4))
+    		cur_percentage = CAPACITY_PERCENTAGE(current_voltage, BATTERY_CHG_LEVEL_3, BATTERY_PERCENT_3,BATTERY_CHG_LEVEL_4,BATTERY_PERCENT_4);
+    	else if ((BATTERY_CHG_LEVEL_4 < current_voltage ) && (current_voltage <=  BATTERY_CHG_LEVEL_5))
+    		cur_percentage = CAPACITY_PERCENTAGE(current_voltage, BATTERY_CHG_LEVEL_4, BATTERY_PERCENT_4,BATTERY_CHG_LEVEL_5,BATTERY_PERCENT_5);
+    	else //if (current_voltage > (high_voltage - 100))
+    		cur_percentage = BATTERY_PERCENT_5;
+    }
+
+    if(0 == once)
+    {
+        pre_percentage = cur_percentage;
+        once = 1;
+    }
+
+    if(pre_status != cur_status)
+    {
+        delay  = 0;
+    }
+
+    /*printk(KERN_ERR "[VBAT] Pre+++  curV<%d>,  curP<%d>,  preP<%d> , delay<%d>, curS<%d>, preS<%d>",  
+        current_voltage, cur_percentage, pre_percentage, delay, cur_status, pre_status);*/
+
+    if( (abs(cur_percentage - pre_percentage) > 6) && ( delay < 0 )  )//??
+    {   //No rise no drop
+        delay++;
+        cur_percentage = pre_percentage;
+    }
+    else 
+    {
+        delay  = 0;
+
+        // need more debug
+        if( (  CHARGER_TYPE_USB_PC != cur_status )&&(  CHARGER_TYPE_USB_WALL!= cur_status ) )
+        {  //Can only drop
+           cur_percentage = (cur_percentage < pre_percentage) ? cur_percentage : pre_percentage;
+           pre_percentage = cur_percentage ;
+        }
+	else 
+        {  //Can only rise
+           cur_percentage = (cur_percentage > pre_percentage) ? cur_percentage : pre_percentage;
+           pre_percentage = cur_percentage ;
+        }
+    }
+
+    pre_status = cur_status;
+
+    /*printk(KERN_ERR "[VBAT] Post---  curV<%d>,  curP<%d>,  preP<%d>, delay<%d>, curS<%d>, preS<%d>",
+        current_voltage, cur_percentage, pre_percentage, delay, cur_status, pre_status);*/
+
+    return cur_percentage;
+        
+}
+#endif
 
 #ifndef CONFIG_BATTERY_MSM_FAKE
 int msm_batt_get_charger_api_version(void)
@@ -1236,7 +1611,7 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 {
 	int rc;
 	struct msm_psy_batt_pdata *pdata = pdev->dev.platform_data;
-
+	oem_rpc_client_register(WAKE_UPDATE_BATT_INFO);
 	if (pdev->id != -1) {
 		dev_err(&pdev->dev,
 			"%s: MSM chipsets Can only support one"
@@ -1286,7 +1661,11 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 	msm_batt_info.voltage_max_design = pdata->voltage_max_design;
 	msm_batt_info.voltage_min_design = pdata->voltage_min_design;
 	msm_batt_info.batt_technology = pdata->batt_technology;
-	msm_batt_info.calculate_capacity = pdata->calculate_capacity;
+#ifdef FEATRUE_BATTERY_CUST
+	msm_batt_info.calculate_capacity = msm_batt_capacity_cust;
+#else
+	msm_batt_info.calculate_capacity = msm_batt_capacity;
+#endif
 
 	if (!msm_batt_info.voltage_min_design)
 		msm_batt_info.voltage_min_design = BATTERY_LOW;
@@ -1355,10 +1734,22 @@ static int __devexit msm_batt_remove(struct platform_device *pdev)
 	}
 	return 0;
 }
-
+static int  msm_batt_resume(struct platform_device *pdev)
+{
+	int rc;
+	//struct	power_supply	*supp;
+	//extern void request_suspend_state(suspend_state_t new_state);
+		//request_suspend_state(PM_SUSPEND_ON);
+//return;
+return 0;
+	printk(KERN_ERR "\nmsm_batt_resume \n");
+	set_data_to_arm9(WAKE_UPDATE_BATT_INFO,(char *)&rc,sizeof(int));
+return 0;
+}
 static struct platform_driver msm_batt_driver = {
 	.probe = msm_batt_probe,
 	.remove = __devexit_p(msm_batt_remove),
+	.resume = msm_batt_resume,
 	.driver = {
 		   .name = "msm-battery",
 		   .owner = THIS_MODULE,
@@ -1437,12 +1828,94 @@ static int __devinit msm_batt_init_rpc(void)
 
 	return rc;
 }
+extern unregister_charger_usb(void);
+extern void hsusb_chg_vbus_draw(unsigned mA);
+//extern pm_err_flag_type pm_hal_rtc_get_alarm_status(uint8 *status_ptr);
+ssize_t battery_misc_read(struct file *filp,char __user *buf,size_t count, loff_t *f_pos)
+{
+	batt_chg_msg.key_for_charger = key_for_charger;
+	key_for_charger = 0;
+	{
+		int power_on_status;
+
+		extern int msm_proc_comm(unsigned cmd, unsigned *data1, unsigned *data2);
+		msm_proc_comm(8/*PCOM_GET_RTC_ALARM_STATUS*/,&power_on_status,0);
+		batt_chg_msg.key_for_charger = power_on_status; 
+		printk(KERN_ERR "\n%s alarm status %x\n",__func__,power_on_status);
+	}
+#if 1 
+	if(batt_chg_msg.charger_type == 2)
+	{
+		hsusb_chg_vbus_draw(500);
+	}
+#endif
+    copy_to_user(buf,&batt_chg_msg,sizeof(batt_chg_msg_t));
+		pr_err("%s: misc battery read \n",__func__ );
+}
+static volatile int charger_state = 0;
+
+int get_charging_state(void)
+{
+    return charger_state;
+}
+EXPORT_SYMBOL(get_charging_state);
+extern int register_charger_usb_init(void);
+int battery_misc_ioctl (struct inode *inode, struct file *flip, unsigned int cmd, unsigned long arg)
+{
+#define ENTERN_POWER_OFF_CHARGING 1
+#define EXIT_POWER_OFF_CHARGING 2
+	char rc = 0xAA;
+	pr_err("%s:",__func__ );
+	if(cmd == ENTERN_POWER_OFF_CHARGING)
+	{
+		if(arg != 2)
+		set_data_to_arm9(WAKE_UPDATE_BATT_INFO,(char *)&rc,sizeof(rc));
+		pr_err("%s: 1--------%d",__func__,arg );
+	{
+		do_gettimeofday(&charger_time_val);
+		printk(KERN_ERR "\nstart charging second %d\n",charger_time_val.tv_sec);
+	}
+		charger_state = 1;
+		if(arg == EXIT_POWER_OFF_CHARGING)
+		{
+			rc = 0;
+			charger_state = 0;
+			set_data_to_arm9(WAKE_UPDATE_BATT_INFO,(char *)&rc,sizeof(rc));
+			unregister_charger_usb();
+
+			pr_err("%s: 2--------%d",__func__,arg );
+		}
+
+	}
+	
+}
+struct file_operations misc_battery_fops = 
+{
+	.owner = THIS_MODULE,
+	.read = &battery_misc_read,
+	.ioctl = &battery_misc_ioctl, 
+};
+struct miscdevice  misc_battery =
+{
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "misc_battery_boot",
+	.fops = &misc_battery_fops,
+};
 
 static int __init msm_batt_init(void)
 {
 	int rc;
 
 	pr_debug("%s: enter\n", __func__);
+#if 0
+	wake_input_dev = input_allocate_device();
+	wake_input_dev->name = "wake up key";
+
+	__set_bit(105, wake_input_dev->keybit);
+
+	__set_bit(EV_KEY, wake_input_dev->evbit);
+	input_register_device(wake_input_dev);
+#endif
 
 	rc = msm_batt_init_rpc();
 
@@ -1451,7 +1924,7 @@ static int __init msm_batt_init(void)
 		msm_batt_cleanup();
 		return rc;
 	}
-
+	misc_register(&misc_battery);
 	pr_info("%s: Charger/Battery = 0x%08x/0x%08x (RPC version)\n",
 		__func__, msm_batt_info.chg_api_version,
 		msm_batt_info.batt_api_version);

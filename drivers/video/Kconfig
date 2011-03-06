@@ -2248,6 +2248,36 @@ config FB_MSM_LCDC_PANEL
 	select FB_MSM_LCDC
 	default n
 
+config FB_MSM_LCDC_HX8363_WVGA
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
+	
+config FB_MSM_LCDC_LG4573_WVGA
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
+
+config FB_MSM_LCDC_ILI9325SIM_QVGA
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
+
+config FB_MSM_LCDC_ILI9418_HVGA
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
+
+config FB_MSM_LCDC_S6D05A1_HVGA
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
+
+config FB_MSM_LCDC_MULTI
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
+
 config FB_MSM_LCDC_ST15_WXGA
     bool
     select FB_MSM_LCDC_PANEL
@@ -2293,6 +2323,86 @@ config FB_MSM_LCDC_WXGA
 choice
 	prompt "LCD Panel"
 	default FB_MSM_MDDI_AUTO_DETECT
+
+config FB_MSM_LCDC_HX8363_WVGA_PANEL
+	depends on FB_MSM_LCDC_HW
+	bool "LCDC LG WVGA Panel"
+	select FB_MSM_LCDC_HX8363_WVGA
+	---help---
+	  Support for LCDC HX8363 WVGA (480x800) panel
+
+config FB_MSM_LCDC_LG4573_WVGA_PANEL
+	depends on FB_MSM_LCDC_HW
+	bool "LCDC LG WVGA Panel"
+	select FB_MSM_LCDC_LG4573_WVGA
+	---help---
+	  Support for LCDC LG4573 WVGA (480x800) panel
+
+config FB_MSM_LCDC_LG4573_WVGA_PANEL_18BIT
+	depends on FB_MSM_LCDC_LG4573_WVGA_PANEL
+	bool "LCDC LG WVGA Panel"
+	select FB_MSM_LCDC_LG4573_WVGA
+	---help---
+	  Support for LCDC LG4573 18 bit display
+
+config FB_MSM_LCDC_ILI9325SIM_QVGA_PANEL
+	depends on FB_MSM_LCDC_HW
+	bool "LCDC SIM VGA Panel"
+	select FB_MSM_LCDC_ILI9325SIM_QVGA
+	---help---
+	  Support for LCDC ILI9325SIM QVGA (240x320) panel
+
+config FB_MSM_LCDC_ILI9418_HVGA_PANEL
+	depends on FB_MSM_LCDC_HW
+	bool "LCDC ILI HVGA Panel"
+	select FB_MSM_LCDC_ILI9418_HVGA
+	---help---
+	  Support for LCDC ILI9418 HVGA (320x480) panel
+
+config FB_MSM_LCDC_S6D05A1_HVGA_PANEL
+	depends on FB_MSM_LCDC_HW
+	bool "LCDC S6D05A1 HVGA Panel"
+	select FB_MSM_LCDC_S6D05A1_HVGA
+	---help---
+	  Support for LCDC S6D05A1 HVGA (320x480) panel
+
+config FB_MSM_LCDC_MULTI_PANEL
+	depends on FB_MSM_LCDC_HW
+	bool "LCDC MULTI Panel"
+	select FB_MSM_LCDC_MULTI
+	---help---
+	  Support for LCDC MULTI panel
+
+config FB_MSM_LCDC_MULTI_9418_PANEL
+	tristate "lcd 9481 support"
+	depends on FB_MSM_LCDC_MULTI_PANEL
+	help
+	  If you say yes here you get support from liguangyu
+
+config FB_MSM_LCDC_MULTI_4573_PANEL
+	tristate "lcd 4573 support"
+	depends on FB_MSM_LCDC_MULTI_PANEL
+	help
+	  If you say yes here you get support from liguangyu
+
+config FB_MSM_LCDC_MULTI_4573_PANEL_18BIT
+	tristate "lcd 4573 support"
+	depends on FB_MSM_LCDC_MULTI_4573_PANEL
+	help
+	 upport for LCDC LG4573 18 bit display
+
+config FB_MSM_LCDC_HVGA
+	tristate "mark for HVGA display"
+	depends on FB_MSM_LCDC_MULTI_PANEL
+	help
+	  If you say yes here you get support from liguangyu
+
+config FB_MSM_LCDC_WVGA
+	tristate "mark for WVGA display"
+	depends on FB_MSM_LCDC_MULTI_PANEL
+	help
+	  If you say yes here you get support from liguangyu
+
 
 config FB_MSM_LCDC_PRISM_WVGA_PANEL
 	depends on FB_MSM_LCDC_HW

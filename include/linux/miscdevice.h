@@ -11,6 +11,7 @@
 #define SUN_MOUSE_MINOR		6
 #define APOLLO_MOUSE_MINOR	7
 #define PC110PAD_MINOR		9
+#define MOTION_MINOR   	 	 98
 /*#define ADB_MOUSE_MINOR	10	FIXME OBSOLETE */
 #define WATCHDOG_MINOR		130	/* Watchdog timer     */
 #define TEMP_MINOR		131	/* Temperature Sensor */

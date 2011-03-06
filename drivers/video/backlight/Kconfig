@@ -262,3 +262,8 @@ config BACKLIGHT_ADP5520
 	  To compile this driver as a module, choose M here: the module will
 	  be called adp5520_bl.
 
+config BACKLIGHT_CHARGE_PUMP
+	bool "Charge Pump Driver for Backlight"
+
+config BACKLIGHT_TPS61045
+	bool "Charge Pump Driver for TPS61045"

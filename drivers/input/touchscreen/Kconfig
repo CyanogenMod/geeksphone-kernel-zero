@@ -301,6 +301,12 @@ config TOUCHSCREEN_SYNAPTICS_I2C_RMI
 	help
 	  This enables support for Synaptics RMI over I2C based touchscreens.
 
+config TOUCHSCREEN_SSD2531
+	tristate "SSD2531 touchscreen"
+	depends on I2C
+	help
+	  This enables support for SSD2531 over I2C based touchscreens.
+
 config TOUCHSCREEN_TOUCHRIGHT
 	tristate "Touchright serial touchscreen"
 	select SERIO
@@ -595,6 +601,47 @@ config TOUCHSCREEN_CY8C_TS
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called cy8c_ts.
+
+config TOUCHSCREEN_VRPANEL
+       tristate "virtual panel"
+       default n
+       help
+         Say Y here if you want to enable the driver for the VRPANEL.
+
+config TOUCHSCREEN_VRPANEL_THREE_KEY
+       tristate "virtual panel"
+       default n
+       help
+         Say Y here if you want to enable three keys for the VRPANEL.
+
+config TOUCHSCREEN_VRPANEL_WVGA_FOUR_KEY
+       tristate "virtual panel"
+       default n
+       help
+         Say Y here if you want to enable four keys for the VRPANEL.
+
+config TOUCHSCREEN_VRPANEL_FOUR_KEY
+       tristate "virtual panel"
+       default n
+       help
+         Say Y here if you want to enable four keys for the VRPANEL.
+
+config TOUCHSCREEN_VRPANEL_SHARP_WVGA_FOUR_KEY
+       tristate "virtual panel"
+       default n
+       help
+         Say Y here if you want to enable four keys for the VRPANEL.
+
+config RAM_SIZE_512MB
+       tristate "memory"
+       default n
+       help
+         contact zhaosu.
+config TOUCHSCREEN_CALIBRATION
+       tristate "touchscreen calibration"
+       default n
+       help
+         Say Y here if you want to enable touchscreen calibration.
 
 config TOUCHSCREEN_CYTTSP_I2C
        tristate "Cypress TTSP based touchscreens"

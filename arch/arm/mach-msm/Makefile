@@ -1,3 +1,6 @@
+
+CFLAGS_REMOVE_board-pw28.o = -Werror
+
 obj-y += io.o dma.o memory.o
 obj-y += clock.o
 obj-y += modem_notifier.o
@@ -120,6 +123,10 @@ ifdef CONFIG_ARCH_MSM8X60
 	obj-$(CONFIG_MSM_WATCHDOG) += msm_watchdog.o
 endif
 
+ifeq ($(TARGET_BUILD_VARIANT),user)
+EXTRA_CFLAGS		+= -DVERSION_USER
+endif
+
 obj-$(CONFIG_MACH_MSM8X60_RUMI3) += board-msm8x60.o
 obj-$(CONFIG_MACH_MSM8X60_SIM) += board-msm8x60.o
 obj-$(CONFIG_MACH_MSM8X60_SURF) += board-msm8x60.o
@@ -127,7 +134,11 @@ obj-$(CONFIG_MACH_MSM8X60_FFA) += board-msm8x60.o
 obj-$(CONFIG_TROUT_H2W) += board-trout-h2w.o
 obj-$(CONFIG_TROUT_BATTCHG) += htc_battery.o
 obj-$(CONFIG_TROUT_PWRSINK) += htc_pwrsink.o
+ifeq ($(CONFIG_BOARD_PW28),y)
+obj-$(CONFIG_ARCH_MSM7X27) += board-pw28.o devices-msm7x27.o
+else
 obj-$(CONFIG_ARCH_MSM7X27) += board-msm7x27.o devices-msm7x27.o
+endif
 obj-$(CONFIG_ARCH_MSM7X30) += board-msm7x30.o devices-msm7x30.o
 obj-$(CONFIG_ARCH_MSM7X30) += clock-local.o clock-7x30.o acpuclock-7x30.o
 obj-$(CONFIG_ARCH_MSM7X25) += board-msm7x27.o devices-msm7x25.o

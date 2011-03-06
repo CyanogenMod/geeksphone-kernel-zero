@@ -154,6 +154,15 @@ config MACH_MSM7X27_FFA
 	help
 	  Support for the Qualcomm MSM7x27 FFA eval board.
 
+config BOARD_PW28
+	depends on ARCH_MSM7X27
+	depends on MACH_MSM7X27_FFA
+	depends on !MSM_STACKED_MEMORY
+	default y
+	bool "SIMCOM PW28"
+	help
+	  Support for the SIMCOM PW28 board
+
 config MACH_MSM7X30_SURF
        depends on ARCH_MSM7X30
        depends on !MSM_STACKED_MEMORY
@@ -995,6 +1004,13 @@ config SURF_FFA_GPIO_KEYPAD
 	default y
 	help
 	  Select if the GPIO keypad is attached.
+
+config P15_GPIO_KEYPAD
+	bool "Config keypad pin for project P15"
+	depends on SURF_FFA_GPIO_KEYPAD = "y"
+	default n
+	help
+	  Config keypad pin for project P15.
 
 config CLOCK_BASED_SLEEP_LIMIT
 	default y
