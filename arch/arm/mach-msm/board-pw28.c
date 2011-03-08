@@ -1094,6 +1094,7 @@ int wlan_power(int flag)
 	return 0;
 
 }
+EXPORT_SYMBOL(wlan_power);
 
 static int bluetooth_power(int on)
 {

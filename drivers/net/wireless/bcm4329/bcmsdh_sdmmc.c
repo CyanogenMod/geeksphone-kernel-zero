@@ -1067,7 +1067,9 @@ sdioh_request_buffer(sdioh_info_t *sd, uint pio_dma, uint fix_inc, uint write, u
 extern int
 sdioh_abort(sdioh_info_t *sd, uint func)
 {
+#if defined(MMC_SDIO_ABORT)
 	char t_func = (char) func;
+#endif
 
 	sd_trace(("%s: Enter\n", __FUNCTION__));
 

@@ -173,13 +173,13 @@ static int hcit_ioctl(struct inode *ino, struct file *filp, unsigned int cmd, un
         pmic_set_led_intensity(LED_KEYPAD, PMIC_LED_LCD__LEVEL0);
         break;
     case HCIT_IOCTL_VIB_ON:
-        printk("[HCIT] HCIT_IOControl : HCIT_IOCTL_VIB_ON \r\n");
+        //printk("[HCIT] HCIT_IOControl : HCIT_IOCTL_VIB_ON \r\n");
         {
             int time_ms;
             
             time_ms = *((int*)arg);
          
-            printk("[HCIT] HCIT_IOControl : HCIT_IOCTL_VIB_ON time_ms<%d>\r\n", time_ms);
+            //printk("[HCIT] HCIT_IOControl : HCIT_IOCTL_VIB_ON time_ms<%d>\r\n", time_ms);
 
             pmic_vib_mot_set_volt(VIBRATOR_MOTOR_ON_VOLT);
             if( time_ms > 0)
@@ -190,7 +190,7 @@ static int hcit_ioctl(struct inode *ino, struct file *filp, unsigned int cmd, un
         }
         break;
     case HCIT_IOCTL_VIB_OFF:
-        printk("[HCIT] HCIT_IOControl : HCIT_IOCTL_VIB_OFF\r\n");
+        //printk("[HCIT] HCIT_IOControl : HCIT_IOCTL_VIB_OFF\r\n");
         pmic_vib_mot_set_volt(VIBRATOR_MOTOR_OFF_VOLT);
         break;
     case HCIT_IOCTL_CAMERA_FLASHLED_ON:

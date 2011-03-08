@@ -4256,7 +4256,7 @@ wl_iw_set_wpaauth(
 		} else if (val) {
 			if ((error = dev_wlc_intvar_set(dev, "is_WPS_enrollee", FALSE))) {
 				WL_WSEC(("Failed to clear iovar is_WPS_enrollee\n"));
-				return error;
+				//return error;
 			}
 		}
 
