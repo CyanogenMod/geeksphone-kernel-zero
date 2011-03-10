@@ -1007,6 +1007,21 @@ static struct platform_device msm_fb_device = {
 	}
 };
 
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+static struct resource ram_console_resource[] = {
+	{
+		.flags  = IORESOURCE_MEM,
+	}
+};
+
+static struct platform_device ram_console_device = {
+	.name = "ram_console",
+	.id = -1,
+	.num_resources  = ARRAY_SIZE(ram_console_resource),
+	.resource       = ram_console_resource,
+};
+#endif
+
 #ifdef CONFIG_BT
 static struct platform_device msm_bt_power_device = {
 	.name = "bt_power",
@@ -2328,6 +2343,10 @@ struct platform_device msm_device_gpio_i2c = {
 };
 
 static struct platform_device *devices[] __initdata = {
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+	&ram_console_device,
+#endif
+
 #if !defined(CONFIG_MSM_SERIAL_DEBUGGER)
 	&msm_device_uart3,
 #endif
@@ -3136,6 +3155,18 @@ static void __init msm_msm7x2x_allocate_memory_regions(void)
 	pr_info("allocating %lu bytes at %p (%lx physical) for fb\n",
 		size, addr, __pa(addr));
 
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+	/* RAM Console can't use alloc_bootmem(), since that zeroes the
+	 * region */
+	size = 128 * SZ_1K;
+	ram_console_resource[0].start = msm_fb_resources[0].end+1;
+	ram_console_resource[0].end = ram_console_resource[0].start + size - 1;
+	pr_info("allocating %lu bytes at (%lx physical) for ram console\n",
+			size, (unsigned long)ram_console_resource[0].start);
+	/* We still have to reserve it, though */
+	reserve_bootmem(ram_console_resource[0].start,size,0);
+#endif
+
 	size = pmem_kernel_ebi1_size;
 	if (size) {
 		addr = alloc_bootmem_aligned(size, 0x100000);
@@ -3152,6 +3183,7 @@ static void __init msm_msm7x2x_allocate_memory_regions(void)
 		size , MSM_GPU_PHYS_START_ADDR);
 
 #endif
+
 
 }
 
