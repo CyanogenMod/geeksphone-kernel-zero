@@ -821,11 +821,8 @@ msmsdcc_irq(int irq, void *dev_id)
 
 		data = host->curr.data;
 #ifdef CONFIG_MMC_MSM_SDIO_SUPPORT
-		if (status & MCI_SDIOINTROPE) {
-			if (host->sdcc_suspending)
-				wake_lock(&host->sdio_suspend_wlock);
+		if (status & MCI_SDIOINTROPE)
 			mmc_signal_sdio_irq(host->mmc);
-		}
 #endif
 		/*
 		 * Check for proper command response
@@ -1518,8 +1515,6 @@ msmsdcc_probe(struct platform_device *pdev)
 		}
 	}
 
-	wake_lock_init(&host->sdio_suspend_wlock, WAKE_LOCK_SUSPEND,
-			mmc_hostname(mmc));
 	/*
 	 * Setup card detect change
 	 */
@@ -1637,7 +1632,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	if (plat->status_irq)
 		free_irq(plat->status_irq, host);
  sdiowakeup_irq_free:
-	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq) {
 		wake_lock_destroy(&host->sdio_wlock);
 		free_irq(plat->sdiowakeup_irq, host);
@@ -1693,7 +1687,6 @@ static int msmsdcc_remove(struct platform_device *pdev)
 	if (plat->status_irq)
 		free_irq(plat->status_irq, host);
 
-	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq) {
 		wake_lock_destroy(&host->sdio_wlock);
 		set_irq_wake(plat->sdiowakeup_irq, 0);
@@ -1766,7 +1759,6 @@ msmsdcc_runtime_suspend(struct device *dev)
 			enable_irq_wake(host->plat->sdiowakeup_irq);
 			enable_irq(host->plat->sdiowakeup_irq);
 		}
-		host->sdcc_suspending = 0;
 	}
 	return rc;
 }
@@ -1809,10 +1801,8 @@ msmsdcc_runtime_resume(struct device *dev)
 		 * After resuming the host wait for sometime so that
 		 * the SDIO work will be processed.
 		 */
-		if ((mmc->pm_flags & MMC_PM_WAKE_SDIO_IRQ) && release_lock)
-			wake_lock_timeout(&host->sdio_wlock, 1);
-
-		wake_unlock(&host->sdio_suspend_wlock);
+		if (host->plat->sdiowakeup_irq && release_lock)
+			wake_lock_timeout(&host->sdio_wlock, HZ / 2);
 	}
 	return 0;
 }
@@ -1833,7 +1823,6 @@ static int msmsdcc_pm_suspend(struct device *dev)
 
 	if (host->plat->status_irq)
 		disable_irq(host->plat->status_irq);
-	host->sdcc_suspending = 1;
 
 	if (!pm_runtime_suspended(dev))
 		rc = msmsdcc_runtime_suspend(dev);
