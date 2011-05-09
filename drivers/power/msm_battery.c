@@ -71,7 +71,7 @@
 #define BATTERY_LOW            	3500
 #define BATTERY_HIGH           	4300
 
-#define FEATRUE_BATTERY_CUST /*SWH*/
+//#define FEATRUE_BATTERY_CUST /*SWH*/
 
 #ifdef FEATRUE_BATTERY_CUST
 
@@ -413,13 +413,13 @@ static int msm_batt_power_get_property(struct power_supply *psy,
 		val->intval = msm_batt_info.batt_technology;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
-		val->intval = msm_batt_info.voltage_max_design;
+		val->intval = msm_batt_info.voltage_max_design * 1000;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
-		val->intval = msm_batt_info.voltage_min_design;
+		val->intval = msm_batt_info.voltage_min_design * 1000;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		val->intval = msm_batt_info.battery_voltage;
+		val->intval = msm_batt_info.battery_voltage * 1000;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		val->intval = msm_batt_info.batt_capacity;
@@ -1664,7 +1664,7 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 #ifdef FEATRUE_BATTERY_CUST
 	msm_batt_info.calculate_capacity = msm_batt_capacity_cust;
 #else
-	msm_batt_info.calculate_capacity = msm_batt_capacity;
+	msm_batt_info.calculate_capacity = pdata->calculate_capacity;
 #endif
 
 	if (!msm_batt_info.voltage_min_design)

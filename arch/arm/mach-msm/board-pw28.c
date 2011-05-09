@@ -2307,7 +2307,7 @@ static struct platform_device msm_camera_sensor_vb6801 = {
 static u32 msm_calculate_batt_capacity(u32 current_voltage);
 
 static struct msm_psy_batt_pdata msm_psy_batt_data = {
-	.voltage_min_design 	= 3500,
+	.voltage_min_design 	= 3250,
 	.voltage_max_design	= 4300,
 	.avail_chg_sources   	= AC_CHG | USB_CHG ,
 	.batt_technology        = POWER_SUPPLY_TECHNOLOGY_LION,
@@ -2318,9 +2318,15 @@ static u32 msm_calculate_batt_capacity(u32 current_voltage)
 {
 	u32 low_voltage   = msm_psy_batt_data.voltage_min_design;
 	u32 high_voltage  = msm_psy_batt_data.voltage_max_design;
-
-	return (current_voltage - low_voltage) * 100
+	u32 perc = (current_voltage - low_voltage) * 100
 		/ (high_voltage - low_voltage - 100);
+
+	if (perc>100)
+		perc=100;
+	else if (perc<0)
+		perc=0;
+
+	return perc;
 }
 
 static struct platform_device msm_batt_device = {
