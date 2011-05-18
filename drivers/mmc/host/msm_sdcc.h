@@ -168,8 +168,6 @@
 
 #define NR_SG		32
 
-#define MSM_MMC_IDLE_TIMEOUT	10000 /* msec */
-
 struct clk;
 
 struct msmsdcc_nc_dmadata {
@@ -249,6 +247,9 @@ struct msmsdcc_host {
 
 	struct tasklet_struct 	dma_tlet;
 
+#ifdef CONFIG_MMC_AUTO_SUSPEND
+	unsigned long           suspended;
+#endif
 	unsigned int prog_scan;
 	unsigned int prog_enable;
 
@@ -264,6 +265,8 @@ struct msmsdcc_host {
 	unsigned int	dummy_52_state;
 	unsigned int	sdio_irq_disabled;
 	struct wake_lock	sdio_wlock;
+	struct wake_lock	sdio_suspend_wlock;
+	unsigned int    sdcc_suspending;
 
 };
 
