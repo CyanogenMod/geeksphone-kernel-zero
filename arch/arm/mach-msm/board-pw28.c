@@ -2603,10 +2603,12 @@ static void msm_sdcc_setup_gpio(int dev_id, unsigned int enable)
 	}
 }
 
+
 static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 {
 	int rc = 0;
 	struct platform_device *pdev;
+	static unsigned mpp_mmc = 2;
 
 	pdev = container_of(dv, struct platform_device, dev);
 	msm_sdcc_setup_gpio(pdev->id, !!vdd);
@@ -2619,7 +2621,7 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 
 
 		if (!vreg_sts) {
-#if 0
+#if 1
 			if (machine_is_msm7x25_ffa() ||
 					machine_is_msm7x27_ffa()) {
 				rc = mpp_config_digital_out(mpp_mmc,
@@ -2627,8 +2629,9 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 				     MPP_DLOGIC_OUT_CTRL_LOW));
 			} else
 				rc = vreg_disable(vreg_mmc);
-#endif
+#else
 			rc = vreg_disable(vreg_mmc);
+#endif
 			if (rc)
 				printk(KERN_ERR "%s: return val: %d \n",
 					__func__, rc);
@@ -2637,7 +2640,7 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 	}
 
 	if (!vreg_sts) {
-#if 0
+#if 1
 		if (machine_is_msm7x25_ffa() || machine_is_msm7x27_ffa()) {
 			rc = mpp_config_digital_out(mpp_mmc,
 			     MPP_CFG(MPP_DLOGIC_LVL_MSMP,
@@ -2647,10 +2650,11 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 			if (!rc)
 				rc = vreg_enable(vreg_mmc);
 		}
-#endif
+#else
 		rc = vreg_set_level(vreg_mmc, 2850);
 		if (!rc)
 			rc = vreg_enable(vreg_mmc);
+#endif
 
 		if (rc)
 			printk(KERN_ERR "%s: return val: %d \n",
