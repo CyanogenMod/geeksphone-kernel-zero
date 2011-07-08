@@ -2304,16 +2304,7 @@ static struct platform_device msm_camera_sensor_vb6801 = {
 #endif
 #endif
 
-static u32 msm_calculate_batt_capacity(u32 current_voltage);
-
-static struct msm_psy_batt_pdata msm_psy_batt_data = {
-	.voltage_min_design 	= 3250,
-	.voltage_max_design	= 4300,
-	.avail_chg_sources   	= AC_CHG | USB_CHG ,
-	.batt_technology        = POWER_SUPPLY_TECHNOLOGY_LION,
-	.calculate_capacity	= &msm_calculate_batt_capacity,
-};
-
+#ifdef NOT_IN_USE
 static u32 msm_calculate_batt_capacity(u32 current_voltage)
 {
 	u32 low_voltage   = msm_psy_batt_data.voltage_min_design;
@@ -2328,6 +2319,16 @@ static u32 msm_calculate_batt_capacity(u32 current_voltage)
 
 	return perc;
 }
+#endif
+
+static struct msm_psy_batt_pdata msm_psy_batt_data = {
+	.voltage_min_design 	= 3250,
+	.voltage_max_design	= 4300,
+	.avail_chg_sources   	= AC_CHG | USB_CHG ,
+	.batt_technology        = POWER_SUPPLY_TECHNOLOGY_LION,
+	//.calculate_capacity	= &msm_calculate_batt_capacity,
+};
+
 
 static struct platform_device msm_batt_device = {
 	.name 		    = "msm-battery",
