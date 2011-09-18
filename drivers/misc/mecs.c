@@ -28,6 +28,7 @@
 #include <linux/input.h>
 #include <linux/workqueue.h>
 #include <linux/freezer.h>
+#include <linux/wakelock.h>
 #include <asm/uaccess.h>
 
 #include "mecs.h"
@@ -53,6 +54,8 @@ static atomic_t	m_flag;
 static atomic_t	o_flag;
 static atomic_t	p_flag;
 static atomic_t	l_flag;
+
+static struct wake_lock proxi_lock;
 
 static short ecompass_delay = 0;
 
@@ -174,6 +177,10 @@ static int ecs_ctrl_ioctl(struct inode *inode, struct file *file,
 		if (flag < 0 || flag > 1)
 			return -EINVAL;
 		atomic_set(&p_flag, flag);
+		if (flag)
+			wake_lock(&proxi_lock);
+		else
+			wake_unlock(&proxi_lock);
 		break;
 	case ECOMPASS_IOC_GET_PFLAG:
 		flag = atomic_read(&p_flag);
@@ -363,7 +370,7 @@ static int __init ecompass_init(void)
 
 	/* proximity distance, 1 ~ 110 mm*/
 	input_set_abs_params(ecs_data_device, ABS_DISTANCE, 
-		1, 110, 0, 0);
+		1, 30, 0, 0);
 
 	/* ambient light lux, 5 ~ 65535 Lux*/
 	input_set_abs_params(ecs_data_device, ABS_VOLUME, 
@@ -389,6 +396,8 @@ static int __init ecompass_init(void)
 	}
 
 
+	wake_lock_init(&proxi_lock, WAKE_LOCK_SUSPEND, "proximity_lock");
+
 	pr_info("ecompass driver: init--\n");
 
 	return 0;
@@ -404,6 +413,7 @@ out:
 static void __exit ecompass_exit(void)
 {
 	pr_info("ecompass driver: exit\n");
+	wake_lock_destroy(&proxi_lock);
 	device_remove_file(ecs_ctrl_device.this_device, &dev_attr_ecs_ctrl);
 	misc_deregister(&ecs_ctrl_device);
 	input_free_device(ecs_data_device);
