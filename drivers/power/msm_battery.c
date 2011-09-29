@@ -71,7 +71,7 @@
 #define BATTERY_LOW            	3500
 #define BATTERY_HIGH           	4300
 
-//#define FEATRUE_BATTERY_CUST /*SWH*/
+#define FEATRUE_BATTERY_CUST /*SWH*/
 
 #ifdef FEATRUE_BATTERY_CUST
 
